@@ -1,6 +1,7 @@
 package prompt
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"strings"
@@ -13,17 +14,35 @@ type Answer struct {
 	Key  rune
 }
 
-func Prompt(rw io.ReadWriter, text string, options []Answer) (Answer, error) {
+func Prompt(in io.Reader, out io.Writer, text string, options []Answer) (Answer, error) {
 	var optionDisplays []string
 	for _, option := range options {
 		optionDisplays = append(optionDisplays, option.display())
 	}
 
-	display := fmt.Sprintf("%s (%s)", text, strings.Join(optionDisplays, ", "))
+	_, err := fmt.Fprintf(out, "%s (%s)\n", text, strings.Join(optionDisplays, ", "))
 
-	rw.Write([]byte(display))
+	if err != nil {
+		return Answer{}, err
+	}
 
-	return Answer{}, nil
+	for {
+		scanner := bufio.NewScanner(in)
+		var reply string
+		if scanner.Scan() {
+			reply = strings.ToLower(scanner.Text())
+		} else {
+			return Answer{}, scanner.Err()
+		}
+
+		for _, option := range options {
+			if option.isMatch(reply) {
+				return option, nil
+			}
+		}
+
+		fmt.Fprintln(out, "Sorry, that didn't match any of the prompt options.")
+	}
 }
 
 func (a Answer) display() string {
@@ -32,6 +51,10 @@ func (a Answer) display() string {
 	} else {
 		return fmt.Sprintf("%s %s", emphasize(a.Key), a.Name)
 	}
+}
+
+func (a Answer) isMatch(s string) bool {
+	return strings.EqualFold(s, string(a.Key)) || strings.EqualFold(s, a.Name)
 }
 
 func emphasize(key rune) string {
