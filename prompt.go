@@ -15,12 +15,18 @@ type Answer struct {
 }
 
 func Prompt(in io.Reader, out io.Writer, text string, options []Answer) (Answer, error) {
+	if len(options) == 0 {
+		panic("Cannot create prompt without any options.")
+	}
+
+	defaultOption := options[0]
+
 	var optionDisplays []string
 	for _, option := range options {
 		optionDisplays = append(optionDisplays, option.display())
 	}
 
-	_, err := fmt.Fprintf(out, "%s (%s)\n", text, strings.Join(optionDisplays, ", "))
+	_, err := fmt.Fprintf(out, "%s (%s) [%s]\n", text, strings.Join(optionDisplays, ", "), defaultOption.Name)
 
 	if err != nil {
 		return Answer{}, err
@@ -33,6 +39,10 @@ func Prompt(in io.Reader, out io.Writer, text string, options []Answer) (Answer,
 			reply = strings.ToLower(scanner.Text())
 		} else {
 			return Answer{}, scanner.Err()
+		}
+
+		if reply == "" {
+			return defaultOption, nil
 		}
 
 		for _, option := range options {
