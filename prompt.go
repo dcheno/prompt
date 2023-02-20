@@ -14,19 +14,35 @@ type Answer struct {
 	Key  rune
 }
 
-func Prompt(in io.Reader, out io.Writer, text string, options []Answer) (Answer, error) {
+type Prompter struct {
+	In  io.Reader
+	Out io.Writer
+}
+
+func (p Prompter) Prompt(text string, options []Answer) (Answer, error) {
+	return prompt(p.In, p.Out, text, options, nil)
+}
+
+func (p Prompter) PromptWithDefault(text string, options []Answer, defaultAnswer *Answer) (Answer, error) {
+	return prompt(p.In, p.Out, text, options, defaultAnswer)
+}
+
+func prompt(in io.Reader, out io.Writer, text string, options []Answer, defaultOption *Answer) (Answer, error) {
 	if len(options) == 0 {
 		panic("Cannot create prompt without any options.")
 	}
-
-	defaultOption := options[0]
 
 	var optionDisplays []string
 	for _, option := range options {
 		optionDisplays = append(optionDisplays, option.display())
 	}
 
-	_, err := fmt.Fprintf(out, "%s (%s) [%s]\n", text, strings.Join(optionDisplays, ", "), defaultOption.Name)
+	var err error
+	if defaultOption != nil {
+		_, err = fmt.Fprintf(out, "%s (%s) [%s]\n", text, strings.Join(optionDisplays, ", "), defaultOption.Name)
+	} else {
+		_, err = fmt.Fprintf(out, "%s (%s)\n", text, strings.Join(optionDisplays, ", "))
+	}
 
 	if err != nil {
 		return Answer{}, err
@@ -41,8 +57,8 @@ func Prompt(in io.Reader, out io.Writer, text string, options []Answer) (Answer,
 			return Answer{}, scanner.Err()
 		}
 
-		if reply == "" {
-			return defaultOption, nil
+		if reply == "" && defaultOption != nil {
+			return *defaultOption, nil
 		}
 
 		for _, option := range options {
