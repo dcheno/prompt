@@ -23,11 +23,12 @@ func TestPromptReturnsValidAnswer_ShortCode(t *testing.T) {
 
 	script := scripter.NewScript(
 		t,
-		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine) [good]\n"),
+		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine)\n"),
 		scripter.Reply("f\n"),
 	)
 
-	answer, _ := prompt.Prompt(script.In(), script.Out(), "how are you?", options)
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	answer, _ := prompter.Prompt("how are you?", options)
 
 	expectedAnswer := prompt.Answer{"fine", 'f'}
 	if answer != expectedAnswer {
@@ -49,11 +50,12 @@ func TestPromptReturnsValidAnswer_FullName(t *testing.T) {
 
 	script := scripter.NewScript(
 		t,
-		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine) [good]\n"),
+		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine)\n"),
 		scripter.Reply("fine\n"),
 	)
 
-	answer, _ := prompt.Prompt(script.In(), script.Out(), "how are you?", options)
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	answer, _ := prompter.Prompt("how are you?", options)
 
 	expectedAnswer := prompt.Answer{"fine", 'f'}
 	if answer != expectedAnswer {
@@ -71,11 +73,12 @@ func TestPromptEmphasizesFirstMatchingCharacter(t *testing.T) {
 
 	script := scripter.NewScript(
 		t,
-		scripter.Expect("how are you? (I don't kno\033[1mw\033[22m) [I don't know]\n"),
+		scripter.Expect("how are you? (I don't kno\033[1mw\033[22m)\n"),
 		scripter.Reply("w\n"),
 	)
 
-	prompt.Prompt(script.In(), script.Out(), "how are you?", options)
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	prompter.Prompt("how are you?", options)
 
 	script.AssertFinished()
 }
@@ -90,11 +93,12 @@ func TestPromptAddsLeadingCharacterIfNoMatching(t *testing.T) {
 
 	script := scripter.NewScript(
 		t,
-		scripter.Expect("how are you? (\033[1mK\033[22m alright) [alright]\n"),
+		scripter.Expect("how are you? (\033[1mK\033[22m alright)\n"),
 		scripter.Reply("k\n"),
 	)
 
-	prompt.Prompt(script.In(), script.Out(), "how are you?", options)
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	prompter.Prompt("how are you?", options)
 
 	script.AssertFinished()
 }
@@ -121,11 +125,12 @@ func TestPromoptWritesAllPromptOptions(t *testing.T) {
 
 	script := scripter.NewScript(
 		t,
-		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine, \033[1mo\033[22mtherwise, \033[1mK\033[22m alright) [good]\n"),
+		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine, \033[1mo\033[22mtherwise, \033[1mK\033[22m alright)\n"),
 		scripter.Reply("fine\n"),
 	)
 
-	prompt.Prompt(script.In(), script.Out(), "how are you?", options)
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	prompter.Prompt("how are you?", options)
 
 	script.AssertFinished()
 }
@@ -144,13 +149,14 @@ func TestPromptRetriesOnBadAnswer(t *testing.T) {
 
 	script := scripter.NewScript(
 		t,
-		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine) [good]\n"),
+		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine)\n"),
 		scripter.Reply("not great\n"),
 		scripter.Expect("Sorry, that didn't match any of the prompt options.\n"),
 		scripter.Reply("f\n"),
 	)
 
-	prompt.Prompt(script.In(), script.Out(), "how are you?", options)
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	prompter.Prompt("how are you?", options)
 
 	script.AssertFinished()
 }
@@ -172,7 +178,8 @@ func TestPromptPropagatesWriteError(t *testing.T) {
 		},
 	}
 
-	answer, err := prompt.Prompt(r, w, "What happens if the write fails?", options)
+	prompter := prompt.Prompter{r, w}
+	answer, err := prompter.Prompt("What happens if the write fails?", options)
 
 	blankAnswer := prompt.Answer{}
 	if answer != blankAnswer {
@@ -207,7 +214,8 @@ func TestPromptPropagatesReadError(t *testing.T) {
 		},
 	}
 
-	answer, err := prompt.Prompt(r, w, "What happens if the read fails?", options)
+	prompter := prompt.Prompter{r, w}
+	answer, err := prompter.Prompt("What happens if the read fails?", options)
 
 	blankAnswer := prompt.Answer{}
 	if answer != blankAnswer {
@@ -231,11 +239,12 @@ func TestPromptAcceptsCaseInsensitiveShortCode(t *testing.T) {
 
 	script := scripter.NewScript(
 		t,
-		scripter.Expect("are you enjoying 'prompt'? (\033[1my\033[22mes, \033[1mn\033[22mo) [yes]\n"),
+		scripter.Expect("Are you enjoying 'prompt'? (\033[1my\033[22mes, \033[1mn\033[22mo)\n"),
 		scripter.Reply("Y\n"),
 	)
 
-	answer, err := prompt.Prompt(script.In(), script.Out(), "are you enjoying 'prompt'?", options)
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	answer, err := prompter.Prompt("Are you enjoying 'prompt'?", options)
 
 	if err != nil {
 		t.Error("Unexpected error!")
@@ -261,11 +270,12 @@ func TestPromptAcceptsCaseInsensitiveLongAnswer(t *testing.T) {
 
 	script := scripter.NewScript(
 		t,
-		scripter.Expect("are you enjoying 'prompt'? (\033[1my\033[22mes, \033[1mn\033[22mo) [yes]\n"),
+		scripter.Expect("Are you enjoying 'prompt'? (\033[1my\033[22mes, \033[1mn\033[22mo)\n"),
 		scripter.Reply("YeS\n"),
 	)
 
-	answer, err := prompt.Prompt(script.In(), script.Out(), "are you enjoying 'prompt'?", options)
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	answer, err := prompter.Prompt("Are you enjoying 'prompt'?", options)
 
 	if err != nil {
 		t.Error("Unexpected error!")
@@ -273,6 +283,118 @@ func TestPromptAcceptsCaseInsensitiveLongAnswer(t *testing.T) {
 
 	if answer != expectedAnswer {
 		t.Error("Did not return expected answer.")
+	}
+
+	script.AssertFinished()
+}
+
+func TestPromptRetriesOnEmptyAnswer(t *testing.T) {
+	options := []prompt.Answer{
+		{
+			"good",
+			'g',
+		},
+		{
+			"fine",
+			'f',
+		},
+	}
+
+	script := scripter.NewScript(
+		t,
+		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine)\n"),
+		scripter.Reply("\n"),
+		scripter.Expect("Sorry, that didn't match any of the prompt options.\n"),
+		scripter.Reply("f\n"),
+	)
+
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	prompter.Prompt("how are you?", options)
+
+	script.AssertFinished()
+}
+
+func TestPromptWithDefaultUsesDefaultWhenBlank(t *testing.T) {
+	expectedAnswer := prompt.Answer{"fine", 'f'}
+	options := []prompt.Answer{
+		{
+			"good",
+			'g',
+		},
+		expectedAnswer,
+	}
+
+	script := scripter.NewScript(
+		t,
+		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine) [fine]\n"),
+		scripter.Reply("\n"),
+	)
+
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	answer, err := prompter.PromptWithDefault("how are you?", options, &expectedAnswer)
+
+	if err != nil {
+		t.Error("Unexpected error!")
+	}
+
+	if answer != expectedAnswer {
+		t.Error("Got the wrong answer", answer)
+	}
+
+	script.AssertFinished()
+}
+
+func TestPromptWithDefaultStillTakesOtherAnswers(t *testing.T) {
+	expectedAnswer := prompt.Answer{"fine", 'f'}
+	defaultAnswer := prompt.Answer{"good", 'g'}
+	options := []prompt.Answer{
+		defaultAnswer,
+		expectedAnswer,
+	}
+
+	script := scripter.NewScript(
+		t,
+		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine) [good]\n"),
+		scripter.Reply("f\n"),
+	)
+
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	answer, err := prompter.PromptWithDefault("how are you?", options, &defaultAnswer)
+
+	if err != nil {
+		t.Error("Unexpected error!")
+	}
+
+	if answer != expectedAnswer {
+		t.Error("Got the wrong answer", answer)
+	}
+
+	script.AssertFinished()
+}
+
+func TestPromptWithDefaultStillAcceptsExplicitDefaultAnswer(t *testing.T) {
+	expectedAnswer := prompt.Answer{"fine", 'f'}
+	otherAnswer := prompt.Answer{"good", 'g'}
+	options := []prompt.Answer{
+		otherAnswer,
+		expectedAnswer,
+	}
+
+	script := scripter.NewScript(
+		t,
+		scripter.Expect("how are you? (\033[1mg\033[22mood, \033[1mf\033[22mine) [fine]\n"),
+		scripter.Reply("f\n"),
+	)
+
+	prompter := prompt.Prompter{script.In(), script.Out()}
+	answer, err := prompter.PromptWithDefault("how are you?", options, &expectedAnswer)
+
+	if err != nil {
+		t.Error("Unexpected error!")
+	}
+
+	if answer != expectedAnswer {
+		t.Error("Got the wrong answer", answer)
 	}
 
 	script.AssertFinished()
